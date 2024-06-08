@@ -189,8 +189,6 @@ const AddReminder = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Add New Reminder</Text>
-
       <TextInput
         style={styles.description}
         placeholder="Add Description..."

@@ -1,47 +1,33 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
-} from "react-native";
+import React, { useState, useRef } from "react";
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView } from "react-native";
 import { AntDesign, FontAwesome } from "@expo/vector-icons";
 import axios from "axios";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+
+const GCPApiKey = "YOUR_GCP_API_KEY";
+const apiKey = "AIzaSyAcNJQALN2tTEs3eG3CO1cS9sU7goX7O50";
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+const speechToTextUrl = `https://speech.googleapis.com/v1p1beta1/speech:recognize?key=${GCPApiKey}`;
 
 export default function ChatScreen() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingRef = useRef(null);
 
-  const apiKey = "AIzaSyAcNJQALN2tTEs3eG3CO1cS9sU7goX7O50"; // Replace with your actual API key
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  const sendMessage = async (text) => {
+    if (!text.trim()) return;
 
-  const sendMessage = async () => {
-    if (!message.trim()) return;
-
-    setChatHistory((prev) => [
-      ...prev,
-      { role: "user", text: message },
-    ]);
+    setChatHistory(prev => [...prev, { role: "user", text }]);
     setIsLoading(true);
 
     try {
       const response = await axios.post(apiUrl, {
-        contents: [
-          {
-            parts: [{ text: message }],
-          },
-        ],
+        contents: [{ parts: [{ text }] }],
       }, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       console.log("API response:", response.data); // Debug log to inspect the API response
@@ -49,10 +35,7 @@ export default function ChatScreen() {
       const botMessage = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
       console.log("Bot message:", botMessage); // Debug log to inspect the bot message
 
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "bot", text: botMessage },
-      ]);
+      setChatHistory(prev => [...prev, { role: "bot", text: botMessage }]);
     } catch (error) {
       console.error("Error:", error.response?.data || error.message);
     } finally {
@@ -61,39 +44,66 @@ export default function ChatScreen() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+    }
+  };
+
+  const stopRecording = async () => {
+    setIsRecording(false);
+    await recordingRef.current.stopAndUnloadAsync();
+    const uri = recordingRef.current.getURI();
+    console.log("Recording stopped and stored at", uri);
+
+    const audioData = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+
+    try {
+      const response = await axios.post(speechToTextUrl, {
+        config: {
+          encoding: "LINEAR16",
+          sampleRateHertz: 16000,
+          languageCode: "en-US",
+        },
+        audio: { content: audioData },
+      });
+
+      const transcription = response.data.results.map(result => result.alternatives[0].transcript).join("\n");
+      console.log("Transcription:", transcription);
+
+      sendMessage(transcription);
+    } catch (error) {
+      console.error("Error transcribing audio:", error.response?.data || error.message);
+    }
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.key}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.key} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chat with AI Bot</Text>
+          <Text style={styles.headerTitle}>Chat with Tornyelli</Text>
         </View>
 
         <ScrollView style={styles.chatContainer}>
           {chatHistory.map((chat, index) => (
-            <View
-              key={index}
-              style={[
-                styles.chatBubble,
-                chat.role === "user"
-                  ? styles.userBubble
-                  : styles.botBubble,
-              ]}
-            >
+            <View key={index} style={[styles.chatBubble, chat.role === "user" ? styles.userBubble : styles.botBubble]}>
               <Text style={styles.chatBubbleText}>{chat.text}</Text>
             </View>
           ))}
         </ScrollView>
 
         <View style={styles.inputContainer}>
-          <AntDesign
-            name="paperclip"
-            size={24}
-            color="white"
-            style={{ marginLeft: "2%" }}
-          />
+          <AntDesign name="paperclip" size={24} color="white" style={{ marginLeft: "2%" }} />
           <TextInput
             placeholder="Type your message..."
             placeholderTextColor="#888"
@@ -101,12 +111,11 @@ export default function ChatScreen() {
             value={message}
             onChangeText={setMessage}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-            {isLoading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <FontAwesome name="send" size={24} color="white" />
-            )}
+          <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage(message)}>
+            {isLoading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome name="send" size={24} color="white" />}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.micButton} onPressIn={startRecording} onPressOut={stopRecording}>
+            <FontAwesome name={isRecording ? "microphone-slash" : "microphone"} size={24} color="white" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -174,5 +183,10 @@ const styles = StyleSheet.create({
   sendButton: {
     borderRadius: 25,
     padding: 12,
+  },
+  micButton: {
+    borderRadius: 25,
+    padding: 12,
+    marginLeft: 8,
   },
 });
