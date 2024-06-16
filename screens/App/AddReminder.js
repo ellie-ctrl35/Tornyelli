@@ -1,4 +1,4 @@
-import React, { useState ,useEffect} from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,30 +10,11 @@ import {
   Platform,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Ionicons } from "@expo/vector-icons"; // Ensure you have expo/vector-icons installed
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 
-registerForPushNotificationsAsync();
-
-async function schedulePushNotification(reminder) {
-  // Note: 'trigger' needs to be a Date object or a valid trigger object for specific times
-  const trigger = new Date(reminder.time);
-  // Convert to the trigger object for expo-notifications
-  
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "Reminder!",
-      body: reminder.message,
-    },
-    trigger: {
-      // Convert to the trigger object format accepted by expo-notifications
-      hour: trigger.getHours(),
-      minute: trigger.getMinutes(),
-      repeats: reminder.frequency !== "Once",
-    },
-  });
-}
+// Function to handle push notifications registration
 async function registerForPushNotificationsAsync() {
   let token;
   if (Device.isDevice) {
@@ -65,57 +46,30 @@ async function registerForPushNotificationsAsync() {
   return token;
 }
 
+// Function to schedule push notifications
+async function schedulePushNotification(reminder) {
+  const trigger = new Date(reminder.time);
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Reminder!",
+      body: reminder.message,
+    },
+    trigger: {
+      hour: trigger.getHours(),
+      minute: trigger.getMinutes(),
+      repeats: reminder.frequency !== "Once",
+    },
+  });
+}
+
 const AddReminder = () => {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [frequency, setFrequency] = useState(null);
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
-  const [description, setDescription] = useState('');
-
-  useEffect(() => {
-    const fetchReminders = async () => {
-      try {
-        const storedReminders = await AsyncStorage.getItem("reminders");
-        if (storedReminders) {
-          console.info("Reminders from AsyncStorage:", JSON.parse(storedReminders));
-        }
-      } catch (error) {
-        console.error("Error retrieving reminders:", error);
-      }
-    };
-
-    fetchReminders();
-
-    const interval = setInterval(() => {
-      checkReminders();
-    }, 1000); // Check every second
-    return () => clearInterval(interval); // Clean up interval on component unmount
-    
-  }, []);
-
-  const checkReminders = async () => {
-    const storedReminders = await AsyncStorage.getItem("reminders");
-    if (storedReminders) {
-      const reminders = JSON.parse(storedReminders);
-      const now = new Date();
-      reminders.forEach((reminder) => {
-        const reminderTime = new Date(reminder.time);
-        if (
-          now.getFullYear() === reminderTime.getFullYear() &&
-          now.getMonth() === reminderTime.getMonth() &&
-          now.getDate() === reminderTime.getDate() &&
-          now.getHours() === reminderTime.getHours() &&
-          now.getMinutes() === reminderTime.getMinutes() &&
-          now.getSeconds() === 0
-        ) {
-          // Trigger notification for the reminder
-          schedulePushNotification(reminder);
-        }
-      });
-    }
-  };
-
+  const [description, setDescription] = useState("");
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -159,95 +113,116 @@ const AddReminder = () => {
       const reminder = {
         id: Date.now().toString(),
         description,
-        time: reminderDateTime.toISOString(), // ISO string of the scheduled time
+        time: reminderDateTime.toISOString(),
         message: `Reminder for ${description}`,
         frequency,
       };
 
-      // Save reminder to AsyncStorage
       const storedReminders = await AsyncStorage.getItem("reminders");
       const reminders = storedReminders ? JSON.parse(storedReminders) : [];
       reminders.push(reminder);
       await AsyncStorage.setItem("reminders", JSON.stringify(reminders));
-      console.log("Reminder saved successfully!", reminder);
 
-      // Schedule notification
       await schedulePushNotification(reminder);
 
-      setDescription('');
-    setDate(new Date());
-    setTime(new Date());
-    setFrequency('Once');
-    Alert.alert("Reminder Set", "Your reminder has been saved and scheduled.");
+      setDescription("");
+      setDate(new Date());
+      setTime(new Date());
+      setFrequency("Once");
 
-      // Reset state or navigate away
+      Alert.alert(
+        "Reminder Set",
+        "Your reminder has been saved and scheduled."
+      );
     } catch (error) {
-      // Handle errors
       console.error("Failed to save reminder", error);
+      Alert.alert("Error", "Failed to save reminder. Please try again.");
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <TextInput
-        style={styles.description}
-        placeholder="Add Description..."
-        value={description}
-        onChangeText={setDescription}
-      />
+      <Text style={styles.heading}>Add New Reminder</Text>
+      <View style={styles.form}>
+        <TouchableOpacity
+          onPress={showDatePicker}
+          style={[styles.inputField, { backgroundColor: "#F26B6B" }]}
+        >
+          <Ionicons name="calendar" size={24} color="#fff" />
+          <Text style={styles.inputText}>{date.toLocaleDateString()}</Text>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        {showDate && (
+          <DateTimePicker
+            value={date}
+            mode={"date"}
+            display="default"
+            onChange={handleDateChange}
+            style={styles.dateTimePicker}
+          />
+        )}
 
-      {/* Date Picker */}
-      <TouchableOpacity onPress={showDatePicker} style={styles.inputField}>
-        <Ionicons name="calendar" size={24} color="black" />
-        <Text style={styles.inputText}>{date.toLocaleDateString()}</Text>
-        <Ionicons name="chevron-down" size={24} color="black" />
-      </TouchableOpacity>
-      {showDate && (
-        <DateTimePicker
-          value={date}
-          mode={"date"}
-          display="default"
-          onChange={handleDateChange}
+        <TouchableOpacity
+          onPress={showTimePicker}
+          style={[styles.inputField, { backgroundColor: "#A0CED9" }]}
+        >
+          <Ionicons name="time" size={24} color="#fff" />
+          <Text style={styles.inputText}>{time.toLocaleTimeString()}</Text>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        {showTime && (
+          <DateTimePicker
+            value={time}
+            mode={"time"}
+            is24Hour={true}
+            display="default"
+            onChange={handleTimeChange}
+            style={styles.dateTimePicker}
+          />
+        )}
+
+        <TouchableOpacity
+          onPress={selectFrequency}
+          style={[styles.inputField, { backgroundColor: "#E6E8EA" }]}
+        >
+          <Ionicons name="repeat" size={24} color="#000" />
+          <Text style={styles.inputText}>
+            {frequency || "Select Frequency"}
+          </Text>
+          <Ionicons name="chevron-forward" size={24} color="#000" />
+        </TouchableOpacity>
+
+        <View
           style={{
-            backgroundColor: "#fff",
-            alignSelf: "center",
-            justifyContent: "center",
-            marginTop: "1%",
+            borderColor: "#555",
+            borderWidth: 1,
+            borderRadius: 7,
+            height: 200,
+            width: "100%",
+            backgroundColor: "#2a2e37",
+            marginTop: "5%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
           }}
-        />
-      )}
-
-      {/* Time Picker */}
-      <TouchableOpacity onPress={showTimePicker} style={styles.inputField}>
-        <Ionicons name="time" size={24} color="black" />
-        <Text style={styles.inputText}>{time.toLocaleTimeString()}</Text>
-        <Ionicons name="chevron-down" size={24} color="black" />
-      </TouchableOpacity>
-      {showTime && (
-        <DateTimePicker
-          value={time}
-          mode={"time"}
-          is24Hour={true}
-          display="default"
-          onChange={handleTimeChange}
-          style={{
-            backgroundColor: "#fff",
-            alignSelf: "center",
-            justifyContent: "center",
-            marginTop: "1%",
-          }}
-        />
-      )}
-
-      {/* Frequency Selector */}
-      <TouchableOpacity onPress={selectFrequency} style={styles.inputField}>
-        <Ionicons name="repeat" size={24} color="black" />
-        <Text style={styles.inputText}>{frequency || "Select Frequency"}</Text>
-        <Ionicons name="chevron-down" size={24} color="black" />
-      </TouchableOpacity>
+        >
+          <TextInput
+            style={{ backgroundColor: "#2a2e37",color:"white",paddingLeft:10, height: 50, borderRadius: 7 ,margin:0, borderBottomColor:"#555", borderBottomWidth:1}}
+            placeholder="Enter Title"
+            placeholderTextColor="#ccc"
+          />
+          <TextInput
+            style={styles.description}
+            placeholder="Add Description..."
+            value={description}
+            onChangeText={setDescription}
+            placeholderTextColor="#ccc"
+          />
+        </View>
+      </View>
 
       <TouchableOpacity style={styles.addButton} onPress={handleSaveReminder}>
-        <Text style={styles.addButtonText}>Add Reminder</Text>
+        <Ionicons name="checkmark" size={24} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -256,59 +231,55 @@ const AddReminder = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#050c1c", // Assuming dark mode from screenshot
+    backgroundColor: "#050c1c",
     paddingTop: "5%",
+    paddingHorizontal: 20,
   },
-  header: {
+  heading: {
+    color: "#fff",
     fontSize: 20,
     fontWeight: "bold",
-    color: "#fff",
+    textAlign: "center",
+    marginVertical: 20,
+  },
+  form: {
     marginBottom: 20,
-    marginTop: "3%",
-    marginLeft: "2%",
   },
   inputField: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#BAE6FD", // Replace with actual color from your theme
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 20,
     borderRadius: 10,
-    marginTop: "6%",
-    height: "10%",
+    marginTop: 20,
   },
   inputText: {
-    color: "#000",
+    color: "#fff",
+    marginLeft: 10,
+    fontSize: 16,
   },
   description: {
     color: "#fff",
-    borderColor: "#555", // Lighter grey for border
-    borderWidth: 1,
-    borderRadius: 5,
-    height: "9%",
-    width: "90%",
-    alignSelf: "center",
-    padding: 10,
-    marginTop: "5%",
+    borderRadius: 10,
+    height: 150,
+    width: "100%",
+    paddingHorizontal: 10,
+    backgroundColor: "#2a2e37",
   },
   addButton: {
-    backgroundColor: "#BAE6FD", // Replace with actual color from your theme
+    backgroundColor: "#795cd7",
     padding: 15,
-    borderRadius: 10,
-    width: "90%",
-    height: "10%",
-    alignSelf: "center",
-    marginTop: "10%",
-    justifyContent: "center ",
+    borderRadius: 50,
+    position: "absolute",
+    bottom: 40,
+    right: 40,
     alignItems: "center",
-    display: "flex",
   },
-  addButtonText: {
-    textAlign: "center",
-    color: "#000",
-    fontWeight: "bold",
-    fontSize: 20,
+  dateTimePicker: {
+    backgroundColor: "#fff",
+    alignSelf: "center",
+    marginTop: 10,
   },
 });
 

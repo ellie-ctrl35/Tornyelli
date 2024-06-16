@@ -22,7 +22,7 @@ const BottomTabs = () => {
       if (route.name === 'Home') {
         iconName = 'home';
       } else if (route.name === 'Chat') {
-        iconName = 'chat';
+        iconName = 'robot-angry';
       } else if (route.name === 'Reminder') {
         iconName = 'bell';
       }

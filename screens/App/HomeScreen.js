@@ -64,6 +64,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#050c1c", // Assuming the background is black
+    paddingTop: "6%",
   },
   header: {
     padding: 20,
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
     marginTop: "3%",
   },
   featureBox: {
-    backgroundColor: "#222729", // Dark boxes for features
+    backgroundColor: "#795cd7", // Dark boxes for features
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
