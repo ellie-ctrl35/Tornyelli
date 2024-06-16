@@ -14,7 +14,7 @@ const BottomTabs = () => {
     tabBarStyle: {
       height: '10%',
       elevation: 0,
-      backgroundColor: '#191919',
+      backgroundColor: '#050c1c',
       borderTopColor: 'transparent',
     },
     tabBarIcon: ({ focused, color, size }) => {
@@ -27,7 +27,7 @@ const BottomTabs = () => {
         iconName = 'bell';
       }
       return (
-        <MaterialCommunityIcons name={iconName} size={size} color={focused ? '#5ad7ff' : '#4B5563'} />
+        <MaterialCommunityIcons name={iconName} size={size} color={focused ? '#7f4fe0' : '#4B5563'} />
       );
     },
     tabBarActiveTintColor: '#FFFFFF',
