@@ -63,7 +63,7 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#191919", // Assuming the background is black
+    backgroundColor: "#050c1c", // Assuming the background is black
   },
   header: {
     padding: 20,
