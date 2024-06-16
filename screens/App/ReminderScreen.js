@@ -9,10 +9,10 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import { useNavigation,useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Swipeable } from "react-native-gesture-handler";
-import { MaterialCommunityIcons ,AntDesign} from "@expo/vector-icons";
+import { MaterialCommunityIcons, AntDesign } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -35,6 +35,7 @@ const ReminderScreen = () => {
       fetchReminders();
     }, [])
   );
+
   const navToAdd = () => {
     navigation.navigate("AddReminder");
   };
@@ -47,7 +48,11 @@ const ReminderScreen = () => {
     });
 
     return (
-      <Swipeable renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}>
+      <Swipeable
+        renderRightActions={(progress, dragX) =>
+          renderRightActions(progress, dragX, item)
+        }
+      >
         <TouchableOpacity
           style={styles.item}
           onPress={() => console.log("Pressed")}
@@ -73,25 +78,31 @@ const ReminderScreen = () => {
       outputRange: [-60, 0],
       extrapolate: "clamp",
     });
-  
+
     const handleDelete = async () => {
       try {
-        const updatedReminders = reminders.filter((reminder) => reminder.id !== item.id);
+        const updatedReminders = reminders.filter(
+          (reminder) => reminder.id !== item.id
+        );
         await AsyncStorage.setItem("reminders", JSON.stringify(updatedReminders));
         setReminders(updatedReminders);
       } catch (error) {
         console.error("Error deleting reminder:", error);
       }
     };
-  
+
     return (
       <View style={styles.rightActions}>
-        <Animated.View style={[styles.actionButton, { transform: [{ translateX: trans }] }]}>
+        <Animated.View
+          style={[styles.actionButton, { transform: [{ translateX: trans }] }]}
+        >
           <TouchableOpacity onPress={handleDelete}>
             <MaterialCommunityIcons name="delete" size={30} color="white" />
           </TouchableOpacity>
         </Animated.View>
-        <Animated.View style={[styles.actionButton, { transform: [{ translateX: trans }] }]}>
+        <Animated.View
+          style={[styles.actionButton, { transform: [{ translateX: trans }] }]}
+        >
           <TouchableOpacity onPress={() => console.log("Edit")}>
             <MaterialCommunityIcons name="pencil" size={30} color="white" />
           </TouchableOpacity>
@@ -99,18 +110,18 @@ const ReminderScreen = () => {
       </View>
     );
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topContainer}>
         <Text style={styles.title}>Reminders</Text>
         <TouchableOpacity onPress={navToAdd} style={styles.addBtn}>
-        <AntDesign name="plus" size={30} color="black" />
+          <AntDesign name="plus" size={30} color="black" />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={reminders}
+        data={[...reminders].sort((a, b) => new Date(b.time) - new Date(a.time))}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
       />
@@ -122,7 +133,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#050c1c",
-    paddingTop:"5%"
+    paddingTop: "5%",
   },
   topContainer: {
     flexDirection: "row",
@@ -138,7 +149,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   item: {
-    backgroundColor: "#D1FAE5",
+    backgroundColor: "#8e59ff",
     padding: 15,
     borderRadius: 10,
     flexDirection: "row",
@@ -184,9 +195,9 @@ const styles = StyleSheet.create({
     height: 50,
     width: 50,
     borderRadius: 25,
-    display:"flex",
-    justifyContent:"center",
-    alignItems:"center"
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
   rightActions: {
     flexDirection: "row",

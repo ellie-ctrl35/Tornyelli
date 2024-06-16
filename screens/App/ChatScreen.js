@@ -144,7 +144,7 @@ export default function ChatScreen() {
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chat with Tornyelli</Text>
+          <Text style={styles.headerTitle}>Chat with Tornyeli</Text>
         </View>
 
         <ScrollView style={styles.chatContainer}>
@@ -197,8 +197,9 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#050c1c",
     justifyContent: "space-between",
+    paddingTop:"6%"
   },
   key: {
     flex: 1,

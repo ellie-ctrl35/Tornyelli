@@ -12,56 +12,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
-
-// Function to handle push notifications registration
-async function registerForPushNotificationsAsync() {
-  let token;
-  if (Device.isDevice) {
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== "granted") {
-      alert("Failed to get push token for push notification!");
-      return;
-    }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-  } else {
-    alert("Must use physical device for Push Notifications");
-  }
-
-  if (Platform.OS === "android") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
-    });
-  }
-
-  return token;
-}
-
-// Function to schedule push notifications
-async function schedulePushNotification(reminder) {
-  const trigger = new Date(reminder.time);
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "Reminder!",
-      body: reminder.message,
-    },
-    trigger: {
-      hour: trigger.getHours(),
-      minute: trigger.getMinutes(),
-      repeats: reminder.frequency !== "Once",
-    },
-  });
-}
+import { useNavigation } from "@react-navigation/native";
 
 const AddReminder = () => {
   const [date, setDate] = useState(new Date());
@@ -70,6 +21,8 @@ const AddReminder = () => {
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
   const [description, setDescription] = useState("");
+  const [title, setTitle] = useState("");
+  const navigation = useNavigation();
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -116,6 +69,7 @@ const AddReminder = () => {
         time: reminderDateTime.toISOString(),
         message: `Reminder for ${description}`,
         frequency,
+        title: title,
       };
 
       const storedReminders = await AsyncStorage.getItem("reminders");
@@ -123,16 +77,16 @@ const AddReminder = () => {
       reminders.push(reminder);
       await AsyncStorage.setItem("reminders", JSON.stringify(reminders));
 
-      await schedulePushNotification(reminder);
-
       setDescription("");
+      setTitle("");
       setDate(new Date());
       setTime(new Date());
       setFrequency("Once");
 
       Alert.alert(
         "Reminder Set",
-        "Your reminder has been saved and scheduled."
+        "Your reminder has been saved.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     } catch (error) {
       console.error("Failed to save reminder", error);
@@ -207,9 +161,20 @@ const AddReminder = () => {
           }}
         >
           <TextInput
-            style={{ backgroundColor: "#2a2e37",color:"white",paddingLeft:10, height: 50, borderRadius: 7 ,margin:0, borderBottomColor:"#555", borderBottomWidth:1}}
+            style={{
+              backgroundColor: "#2a2e37",
+              color: "white",
+              paddingLeft: 10,
+              height: 50,
+              borderRadius: 7,
+              margin: 0,
+              borderBottomColor: "#555",
+              borderBottomWidth: 1,
+            }}
             placeholder="Enter Title"
             placeholderTextColor="#ccc"
+            value={title}
+            onChangeText={setTitle}
           />
           <TextInput
             style={styles.description}
