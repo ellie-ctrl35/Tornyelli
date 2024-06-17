@@ -1,4 +1,4 @@
-import React from "react";
+import {useState,useEffect} from "react";
 import {
   StyleSheet,
   Text,
@@ -7,12 +7,37 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  FlatList
 } from "react-native";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const [chatHistory, setChatHistory] = useState([]);
+
+  useEffect(() => {
+    loadChatHistory();
+  }, []);
+
+  const loadChatHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem("chatHistory");
+      console.log(history);
+      if (history) {
+        setChatHistory(JSON.parse(history));
+      }
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+    }
+  };
+
+  const renderChatItem = ({ item }) => (
+    <View style={styles.historyItem}>
+      <Text style={styles.historyText}>{item.text}</Text>
+    </View>
+  );
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.featureContainer}>
@@ -50,10 +75,12 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
       <Text style={styles.historyTitle}>History</Text>
-      <ScrollView style={styles.historyContainer}>
-        {/* Map your history items here */}
-      </ScrollView>
-      {/* Your tab navigator goes here, will be addressed in next step */}
+      <FlatList
+        style={styles.historyContainer}
+        data={chatHistory}
+        renderItem={renderChatItem}
+        keyExtractor={(item, index) => index.toString()}
+      />
     </SafeAreaView>
   );
 };
@@ -117,7 +144,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   historyContainer: {
-    // styles for history container
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  historyItem: {
+    backgroundColor: "#222",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+  },
+  historyText: {
+    color: "#fff",
   },
   // ... other styles
 });

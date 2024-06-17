@@ -22,6 +22,16 @@ const apiKey = "AIzaSyAcNJQALN2tTEs3eG3CO1cS9sU7goX7O50";
 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 const speechToTextUrl = `https://speech.googleapis.com/v1p1beta1/speech:recognize?key=${GCPApiKey}`;
 
+// Fake JSON data for doctors
+const doctorsData = [
+  { name: "Dr. Benny", contact: "05677267487" },
+  { name: "Dr. Tickle", contact: "05512345678" },
+  { name: "Dr. Japheth", contact: "05512345678" },
+  { name: "Dr. Prah", contact: "05512345678" },
+  { name: "Dr. Joseph", contact: "05512345678" },
+  // Add more doctors as needed
+];
+
 export default function ChatScreen() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -74,10 +84,16 @@ export default function ChatScreen() {
       const botMessage =
         response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 
-      const updatedChatHistory = [
-        ...newChatHistory,
-        { role: "bot", text: botMessage },
+      let updatedChatHistory = [...newChatHistory, { role: "bot", text: botMessage }];
+
+      // Always append a "Contact Dr" message with random doctor info after bot replies
+      const randomDoctor = getRandomDoctor();
+      const contactMessage = `Contact ${randomDoctor.name} on ${randomDoctor.contact} for more info`;
+      updatedChatHistory = [
+        ...updatedChatHistory,
+        { role: "botContact", text: contactMessage },
       ];
+
       setChatHistory(updatedChatHistory);
       saveChatHistory(updatedChatHistory);
     } catch (error) {
@@ -86,6 +102,10 @@ export default function ChatScreen() {
       setIsLoading(false);
       setMessage("");
     }
+  };
+
+  const getRandomDoctor = () => {
+    return doctorsData[Math.floor(Math.random() * doctorsData.length)];
   };
 
   const startRecording = async () => {
@@ -149,14 +169,20 @@ export default function ChatScreen() {
 
         <ScrollView style={styles.chatContainer}>
           {chatHistory.map((chat, index) => (
-            <View
-              key={index}
-              style={[
-                styles.chatBubble,
-                chat.role === "user" ? styles.userBubble : styles.botBubble,
-              ]}
-            >
-              <Text style={styles.chatBubbleText}>{chat.text}</Text>
+            <View key={index}>
+              <View
+                style={[
+                  styles.chatBubble,
+                  chat.role === "user" ? styles.userBubble : styles.botBubble,
+                ]}
+              >
+                <Text style={styles.chatBubbleText}>{chat.text}</Text>
+              </View>
+              {chat.role === "botContact" && (
+                <View style={styles.contactBubble}>
+                  <Text style={styles.contactText}>{chat.text}</Text>
+                </View>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -260,5 +286,17 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 12,
     marginLeft: 8,
+  },
+  contactBubble: {
+    backgroundColor: "#333",
+    padding: 10,
+    marginTop: 5,
+    marginBottom: 10,
+    borderRadius: 20,
+    maxWidth: "80%",
+    alignSelf: "flex-start",
+  },
+  contactText: {
+    color: "white",
   },
 });
