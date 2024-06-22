@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,11 +8,15 @@ import {
   SafeAreaView,
   Animated,
   Dimensions,
+  Alert,
+  Platform,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Swipeable } from "react-native-gesture-handler";
 import { MaterialCommunityIcons, AntDesign } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
 
 const { width } = Dimensions.get("window");
 
@@ -21,7 +25,7 @@ const ReminderScreen = () => {
   const navigation = useNavigation();
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const fetchReminders = async () => {
         try {
           const storedReminders = await AsyncStorage.getItem("reminders");
@@ -39,6 +43,59 @@ const ReminderScreen = () => {
   const navToAdd = () => {
     navigation.navigate("AddReminder");
   };
+
+  useEffect(() => {
+    const checkReminders = async () => {
+      const now = new Date();
+      reminders.forEach((reminder) => {
+        const reminderTime = new Date(reminder.time);
+        console.log("Current Time:", now);
+        console.log("Reminder Time:", reminderTime);
+
+        if (reminderTime <= now) {
+          console.log("Reminder triggered:", reminder);
+          scheduleNotification(reminder);
+        } else {
+          console.log("Reminder not triggered yet:", reminder);
+        }
+      });
+    };
+
+    const intervalId = setInterval(checkReminders, 60000); // Check every second
+
+    return () => clearInterval(intervalId);
+  }, [reminders]);
+
+  const scheduleNotification = async (reminder) => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: reminder.title || "Reminder",
+        body: reminder.description,
+      },
+      trigger: reminder.time ? new Date(reminder.time) : null,
+    });
+  };
+
+  useEffect(() => {
+    const registerForPushNotificationsAsync = async () => {
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== "granted") {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== "granted") {
+          Alert.alert("Failed to get push token for push notification!");
+          return;
+        }
+      } else {
+        Alert.alert("Must use physical device for Push Notifications");
+      }
+    };
+
+    registerForPushNotificationsAsync();
+  }, []);
 
   const renderItem = ({ item }) => {
     const reminderTime = new Date(item.time);

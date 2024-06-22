@@ -18,6 +18,8 @@ const HomeScreen = () => {
   const [chatHistory, setChatHistory] = useState([]);
 
   useEffect(() => {
+    const now = new Date();
+    console.log("Current Time:", now);
     loadChatHistory();
   }, []);
 
